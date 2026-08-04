@@ -50,7 +50,7 @@ hexagonal layering (domain/application/infrastructure), and key flows
 | :---- | :---- | :---- |
 | [0001](docs/adr/0001-frontend-framework-selection.md) | Frontend language/framework: ReScript | Accepted |
 | [0002](docs/adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md) | Hexagonal architecture (ports & adapters) for the client | Accepted |
-| [0003](docs/adr/0003-runtime-safety-strategy-boundary-decoding.md) | Decode all external data at infrastructure boundaries | Proposed |
+| [0003](docs/adr/0003-runtime-safety-strategy-boundary-decoding.md) | Decode all external data at infrastructure boundaries | Accepted |
 
 ## Roadmap
 
