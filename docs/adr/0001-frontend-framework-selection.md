@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed <!-- Proposed | Accepted | Deprecated | Superseded by [ADR-XXXX](XXXX-filename.md) -->
+Accepted <!-- Proposed | Accepted | Deprecated | Superseded by [ADR-XXXX](XXXX-filename.md) -->
 
 ## Date
 
@@ -119,10 +119,10 @@ core while treating the interop surface as first-class, typed, directly
 testable code — which is where the real risk, and therefore the real value of
 "rock solid," actually lives.
 
-This decision is **Proposed**, not Accepted — it should be revisited after a
-spike validates `rescript-react` + `vite-plugin-pwa` interop and iOS Safari PWA
-behavior (camera access, persistent storage, service worker lifecycle), per
-the SRS §7 risk "iOS Safari PWA limitations."
+**Accepted.** A spike validating `rescript-react` + `vite-plugin-pwa` interop
+and iOS Safari PWA behavior (camera access, persistent storage, service
+worker lifecycle) is still recommended before M2 begins, per the SRS §7 risk
+"iOS Safari PWA limitations" — see Risks below.
 
 ## Consequences
 

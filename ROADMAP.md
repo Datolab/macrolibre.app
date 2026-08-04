@@ -61,6 +61,7 @@ since this is the public AGPL repo:
 
 ## Open decisions
 
-- [ ] Accept or revise [ADR-0001](docs/adr/0001-frontend-framework-selection.md) (ReScript), [ADR-0002](docs/adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md) (hexagonal architecture), [ADR-0003](docs/adr/0003-runtime-safety-strategy-boundary-decoding.md) (boundary decoding)
+- [x] Accept or revise [ADR-0001](docs/adr/0001-frontend-framework-selection.md) (ReScript) — **Accepted**
+- [ ] Accept or revise [ADR-0002](docs/adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md) (hexagonal architecture), [ADR-0003](docs/adr/0003-runtime-safety-strategy-boundary-decoding.md) (boundary decoding)
 - [ ] Decide when/whether `macrolibre/sync-server` becomes its own repo
 - [ ] Define the `datocal.com` ↔ `macrolibre.app` public OpenAPI contract referenced by SRS §2.5

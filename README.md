@@ -44,13 +44,13 @@ the code is AGPL-3.0 — forks must rename.
 
 See [`docs/architecture.md`](docs/architecture.md) for system context,
 hexagonal layering (domain/application/infrastructure), and key flows
-(logging, dataset delta-sync). Key decisions, all currently **Proposed**:
+(logging, dataset delta-sync). Key decisions:
 
-| ADR | Decision |
-| :---- | :---- |
-| [0001](docs/adr/0001-frontend-framework-selection.md) | Frontend language/framework: ReScript |
-| [0002](docs/adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md) | Hexagonal architecture (ports & adapters) for the client |
-| [0003](docs/adr/0003-runtime-safety-strategy-boundary-decoding.md) | Decode all external data at infrastructure boundaries |
+| ADR | Decision | Status |
+| :---- | :---- | :---- |
+| [0001](docs/adr/0001-frontend-framework-selection.md) | Frontend language/framework: ReScript | Accepted |
+| [0002](docs/adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md) | Hexagonal architecture (ports & adapters) for the client | Proposed |
+| [0003](docs/adr/0003-runtime-safety-strategy-boundary-decoding.md) | Decode all external data at infrastructure boundaries | Proposed |
 
 ## Roadmap
 

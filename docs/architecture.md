@@ -5,10 +5,11 @@ Scope: this document covers the **client** only. The hosted platform
 separate, proprietary `datocal.com` repository. See `../srs-macrotracker-mvp.md`
 in the workspace root for the full product SRS both repos derive from.
 
-Status: **Proposed** — this reflects [ADR-0001](adr/0001-frontend-framework-selection.md),
-[ADR-0002](adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md), and
-[ADR-0003](adr/0003-runtime-safety-strategy-boundary-decoding.md), none of
-which are Accepted yet.
+Status: [ADR-0001](adr/0001-frontend-framework-selection.md) (frontend
+language) is **Accepted**. [ADR-0002](adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md)
+(hexagonal layering) and [ADR-0003](adr/0003-runtime-safety-strategy-boundary-decoding.md)
+(boundary decoding) remain **Proposed** — the diagrams below reflect all
+three, but only the language choice is settled.
 
 ## 1. System context
 
@@ -107,7 +108,8 @@ sequenceDiagram
   separate repo from both `macrolibre.app` and `datocal.com`. Only two local
   folders exist today (`macrolibre.app`, `datocal.com`) — decide whether/when to
   set up `sync-server` as its own repo.
-- Framework/language ([ADR-0001](adr/0001-frontend-framework-selection.md)) and
-  hexagonal layering ([ADR-0002](adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md))
-  are both **Proposed**. Nothing here should be treated as final until those
-  ADRs are Accepted.
+- Hexagonal layering ([ADR-0002](adr/0002-adopt-hexagonal-architecture-for-the-spa-client.md))
+  and boundary decoding ([ADR-0003](adr/0003-runtime-safety-strategy-boundary-decoding.md))
+  are still **Proposed**. Nothing describing those layers here should be
+  treated as final until they're Accepted; the frontend language
+  ([ADR-0001](adr/0001-frontend-framework-selection.md)) is settled.
