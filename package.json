@@ -1,0 +1,19 @@
+{
+  "name": "macrolibre",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AGPL local-first PWA macro tracker client (ReScript)",
+  "scripts": {
+    "build": "rescript",
+    "clean": "rescript clean",
+    "test": "rescript && vitest run"
+  },
+  "dependencies": {
+    "@rescript/core": "^1.6.1"
+  },
+  "devDependencies": {
+    "rescript": "^11.1.4",
+    "vitest": "^2.1.8"
+  }
+}

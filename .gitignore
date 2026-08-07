@@ -1,6 +1,12 @@
 # Dependencies
 node_modules/
 .pnp.*
+# CI runs `npm ci`, which needs a committed lockfile; override the global ignore.
+!package-lock.json
+
+# ReScript build artifacts
+lib/
+*.res.mjs
 
 # Build output
 dist/
