@@ -5,15 +5,23 @@
   "type": "module",
   "description": "AGPL local-first PWA macro tracker client (ReScript)",
   "scripts": {
-    "build": "rescript",
-    "clean": "rescript clean",
+    "res": "rescript",
+    "res:clean": "rescript clean",
+    "dev": "vite",
+    "build": "rescript && vite build",
+    "preview": "vite preview",
     "test": "rescript && vitest run"
   },
   "dependencies": {
-    "@rescript/core": "^1.6.1"
+    "@rescript/core": "^1.6.1",
+    "@rescript/react": "^0.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "rescript": "^11.1.4",
+    "vite": "^5.4.11",
+    "vite-plugin-pwa": "^0.20.5",
     "vitest": "^2.1.8"
   }
 }

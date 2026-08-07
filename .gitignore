@@ -8,6 +8,10 @@ node_modules/
 lib/
 *.res.mjs
 
+# App icons are functional PWA assets, not diagram exports — override the
+# global *.svg ignore for them.
+!public/*.svg
+
 # Build output
 dist/
 build/
