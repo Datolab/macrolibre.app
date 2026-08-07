@@ -4,4 +4,5 @@
 type t = {
   upsertMany: array<Food.t> => promise<unit>,
   searchByName: string => promise<array<Food.t>>,
+  count: unit => promise<int>,
 }

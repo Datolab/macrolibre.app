@@ -16,6 +16,7 @@ external createObjectStore: (db, string, {"keyPath": string}) => objectStore = "
 @send
 external getAllFromIndex: (db, string, string, keyRange) => promise<array<JSON.t>> =
   "getAllFromIndex"
+@send external dbCount: (db, string) => promise<int> = "count"
 @val @scope("IDBKeyRange") external keyRangeBound: (string, string) => keyRange = "bound"
 
 let storeName = "foods_local"
@@ -73,5 +74,6 @@ let make = async (): FoodRepository.t => {
         }
       )
     },
+    count: async () => await db->dbCount(storeName),
   }
 }

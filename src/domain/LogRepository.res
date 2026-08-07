@@ -1,0 +1,6 @@
+// Port (ADR-0002): persistence for the food log. Infrastructure (IndexedDB)
+// provides a value of this type.
+type t = {
+  add: LogEntry.t => promise<unit>,
+  listByDay: string => promise<array<LogEntry.t>>,
+}
