@@ -2,64 +2,196 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0f172a" />
     <title>MacroLibre</title>
     <style>
       :root {
         color-scheme: light dark;
+        --bg: #f8fafc;
+        --fg: #0f172a;
+        --muted: #64748b;
+        --surface: #ffffff;
+        --border: #e2e8f0;
+        --accent: #10b981;
+        --accent-fg: #052e21;
+        --header-bg: #0f172a;
+        --header-fg: #e2e8f0;
+        --brand: #34d399;
+        --header-h: 56px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --fg: #e2e8f0;
+          --muted: #94a3b8;
+          --surface: #1e293b;
+          --border: #334155;
+        }
+      }
+      * {
+        box-sizing: border-box;
       }
       body {
         margin: 0;
         font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
         line-height: 1.5;
-        background: #ffffff;
-        color: #0f172a;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      .app-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--header-h);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1rem;
+        background: var(--header-bg);
+        color: var(--header-fg);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+        z-index: 20;
+      }
+      .app-header h1 {
+        margin: 0;
+        color: var(--brand);
+        font-family: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN",
+          "Segoe UI", system-ui, sans-serif;
+        font-size: 1.4rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .hamburger {
+        background: none;
+        border: none;
+        color: var(--header-fg);
+        font-size: 1.5rem;
+        line-height: 1;
+        padding: 0.25rem 0.6rem;
+        cursor: pointer;
+        border-radius: 0.5rem;
+      }
+      .hamburger:hover {
+        background: rgba(255, 255, 255, 0.1);
       }
       main {
         max-width: 40rem;
         margin: 0 auto;
-        padding: 2rem 1.25rem;
+        padding: calc(var(--header-h) + 1.25rem) 1.25rem 3rem;
       }
-      h1 {
-        color: #0f172a;
+      h2 {
+        font-size: 1.05rem;
+        margin: 1.5rem 0 0.5rem;
       }
-      button {
+      input[type="search"],
+      input[type="number"] {
         font: inherit;
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
-        border: 1px solid #10b981;
-        background: #10b981;
-        color: #052e21;
-        cursor: pointer;
+        padding: 0.65rem 0.8rem;
+        border-radius: 0.6rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: inherit;
       }
       input[type="search"] {
-        font: inherit;
         width: 100%;
-        box-sizing: border-box;
-        padding: 0.6rem 0.75rem;
-        margin: 0.75rem 0 1rem;
-        border-radius: 0.5rem;
-        border: 1px solid #94a3b8;
-        background: transparent;
-        color: inherit;
+      }
+      input[type="number"] {
+        width: 6rem;
       }
       ul {
         list-style: none;
         padding: 0;
+        margin: 0.5rem 0;
       }
       li {
-        padding: 0.4rem 0;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+        border-bottom: 1px solid var(--border);
       }
-      @media (prefers-color-scheme: dark) {
-        body {
-          background: #0f172a;
-          color: #e2e8f0;
-        }
-        h1 {
-          color: #34d399;
-        }
+      .food-row {
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: none;
+        padding: 0.7rem 0.25rem;
+        cursor: pointer;
+      }
+      .food-row:hover {
+        color: var(--brand);
+      }
+      .logged {
+        padding: 0.6rem 0.25rem;
+      }
+      button.primary {
+        font: inherit;
+        padding: 0.55rem 1rem;
+        border-radius: 0.6rem;
+        border: none;
+        background: var(--accent);
+        color: var(--accent-fg);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .add {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin: 0.75rem 0;
+      }
+      .totals {
+        font-weight: 700;
+        font-size: 1.05rem;
+      }
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        z-index: 30;
+      }
+      .backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .drawer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        max-width: 40rem;
+        margin: 0 auto;
+        background: var(--surface);
+        color: var(--fg);
+        border-radius: 1rem 1rem 0 0;
+        padding: 0.75rem 1.25rem 2rem;
+        transform: translateY(100%);
+        transition: transform 0.28s ease;
+        z-index: 31;
+        box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.35);
+      }
+      .drawer.open {
+        transform: translateY(0);
+      }
+      .grabber {
+        width: 2.5rem;
+        height: 0.25rem;
+        background: var(--border);
+        border-radius: 2px;
+        margin: 0.25rem auto 1rem;
+      }
+      .drawer h3 {
+        margin: 1rem 0 0.25rem;
+        font-size: 1rem;
+      }
+      .drawer p {
+        margin: 0.25rem 0 0.75rem;
+        color: var(--muted);
+        font-size: 0.9rem;
       }
     </style>
   </head>

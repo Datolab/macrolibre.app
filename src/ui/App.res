@@ -21,6 +21,7 @@ let make = () => {
   let (selected, setSelected) = React.useState(() => (None: option<Food.t>))
   let (grams, setGrams) = React.useState(() => "100")
   let (todayEntries, setTodayEntries) = React.useState(() => ([]: array<LogEntry.t>))
+  let (drawerOpen, setDrawerOpen) = React.useState(() => false)
 
   let refreshToday = (logRepo: LogRepository.t) =>
     logRepo.listByDay(todayKey())->Promise.thenResolve(e => setTodayEntries(_ => e))->ignore
@@ -79,54 +80,61 @@ let make = () => {
 
   let total = Macros.sum(todayEntries->Array.map(e => e.macros))
 
-  <main>
-    <h1> {React.string("MacroLibre")} </h1>
-    {booting
-      ? <p> {React.string(bootMsg)} </p>
-      : <>
-          <input type_="search" placeholder="Search foods…" value={query} onChange={onSearch} />
-          <ul>
-            {results
-            ->Array.map((food: Food.t) =>
-              <li key={food.id}>
-                <button onClick={_ => setSelected(_ => Some(food))}>
-                  {React.string(`${food.nameEn} — ${food.kcal100g->round} kcal/100 g`)}
+  <>
+    <Header onMenu={() => setDrawerOpen(_ => true)} />
+    <main>
+      {booting
+        ? <p> {React.string(bootMsg)} </p>
+        : <>
+            <input type_="search" placeholder="Search foods…" value={query} onChange={onSearch} />
+            <ul>
+              {results
+              ->Array.map((food: Food.t) =>
+                <li key={food.id}>
+                  <button className="food-row" onClick={_ => setSelected(_ => Some(food))}>
+                    {React.string(`${food.nameEn} — ${food.kcal100g->round} kcal/100 g`)}
+                  </button>
+                </li>
+              )
+              ->React.array}
+            </ul>
+            {switch selected {
+            | None => React.null
+            | Some(food) =>
+              <div className="add">
+                <span> {React.string(`Add ${food.nameEn}: `)} </span>
+                <input
+                  type_="number"
+                  value={grams}
+                  onChange={e => setGrams(_ => (e->ReactEvent.Form.target)["value"])}
+                />
+                {React.string(" g ")}
+                <button className="primary" onClick={_ => addToday(food)}>
+                  {React.string("Add to today")}
                 </button>
-              </li>
-            )
-            ->React.array}
-          </ul>
-          {switch selected {
-          | None => React.null
-          | Some(food) =>
-            <div className="add">
-              <span> {React.string(`Add ${food.nameEn}: `)} </span>
-              <input
-                type_="number"
-                value={grams}
-                onChange={e => setGrams(_ => (e->ReactEvent.Form.target)["value"])}
-              />
-              {React.string(" g ")}
-              <button onClick={_ => addToday(food)}> {React.string("Add to today")} </button>
-            </div>
-          }}
-          <h2> {React.string("Today")} </h2>
-          <p className="totals">
-            {React.string(
-              `${total.kcal->round} kcal · ${total.protein->round} P · ${total.carbs->round} C · ${total.fat->round} F`,
-            )}
-          </p>
-          <ul>
-            {todayEntries
-            ->Array.map((entry: LogEntry.t) =>
-              <li key={entry.id}>
-                {React.string(
-                  `${entry.foodName} — ${entry.grams->round} g · ${entry.macros.kcal->round} kcal`,
-                )}
-              </li>
-            )
-            ->React.array}
-          </ul>
-        </>}
-  </main>
+              </div>
+            }}
+            <h2> {React.string("Today")} </h2>
+            <p className="totals">
+              {React.string(
+                `${total.kcal->round} kcal · ${total.protein->round} P · ${total.carbs->round} C · ${total.fat->round} F`,
+              )}
+            </p>
+            <ul>
+              {todayEntries
+              ->Array.map((entry: LogEntry.t) =>
+                <li key={entry.id}>
+                  <div className="logged">
+                    {React.string(
+                      `${entry.foodName} — ${entry.grams->round} g · ${entry.macros.kcal->round} kcal`,
+                    )}
+                  </div>
+                </li>
+              )
+              ->React.array}
+            </ul>
+          </>}
+    </main>
+    <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(_ => false)} />
+  </>
 }
