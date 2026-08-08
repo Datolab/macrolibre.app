@@ -10,6 +10,7 @@ external openDB: (string, int, {"upgrade": db => unit}) => promise<db> = "openDB
 external createObjectStore: (db, string, {"keyPath": string}) => objectStore = "createObjectStore"
 @send external createIndex: (objectStore, string, string) => unit = "createIndex"
 @send external put: (db, string, JSON.t) => promise<JSON.t> = "put"
+@send external deleteById: (db, string, string) => promise<unit> = "delete"
 @send
 external getAllFromIndex: (db, string, string, keyRange) => promise<array<JSON.t>> =
   "getAllFromIndex"
@@ -89,5 +90,6 @@ let make = async (): LogRepository.t => {
       let rows = await db->getAllFromIndex(storeName, indexName, keyRangeOnly(day))
       rows->Array.filterMap(fromJson)
     },
+    remove: async id => await db->deleteById(storeName, id),
   }
 }

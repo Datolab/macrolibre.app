@@ -124,6 +124,40 @@
       .logged {
         padding: 0.6rem 0.25rem;
       }
+      .log-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .row-actions {
+        display: inline-flex;
+        gap: 0.25rem;
+        flex-shrink: 0;
+      }
+      .edit-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .edit-row input[type="number"] {
+        width: 5rem;
+      }
+      button.link {
+        font: inherit;
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 0.25rem 0.45rem;
+        border-radius: 0.4rem;
+      }
+      button.link:hover {
+        color: var(--fg);
+      }
+      button.link.danger:hover {
+        color: #fb7185;
+      }
       button.primary {
         font: inherit;
         padding: 0.55rem 1rem;

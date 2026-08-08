@@ -7,3 +7,10 @@ type t = {
   macros: Macros.t,
   day: string, // YYYY-MM-DD
 }
+
+// Change the logged quantity, rescaling the macros proportionally. No need for
+// the original food — the stored macros are the basis.
+let rescale = (entry: t, newGrams: float): t => {
+  let factor = entry.grams > 0. ? newGrams /. entry.grams : 0.
+  {...entry, grams: newGrams, macros: Macros.scale(entry.macros, factor)}
+}

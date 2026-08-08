@@ -24,6 +24,8 @@ let make = () => {
   let (drawerOpen, setDrawerOpen) = React.useState(() => false)
   let profileStore = LocalStorageProfileStore.make()
   let (profile, setProfile) = React.useState(() => (None: option<Profile.t>))
+  let (editingId, setEditingId) = React.useState(() => (None: option<string>))
+  let (editGrams, setEditGrams) = React.useState(() => "")
 
   let refreshToday = (logRepo: LogRepository.t) =>
     logRepo.listByDay(todayKey())->Promise.thenResolve(e => setTodayEntries(_ => e))->ignore
@@ -81,6 +83,29 @@ let make = () => {
       }
     }
 
+  let removeEntry = id =>
+    switch logs {
+    | Some(logRepo) => logRepo.remove(id)->Promise.thenResolve(_ => refreshToday(logRepo))->ignore
+    | None => ()
+    }
+
+  let startEdit = (entry: LogEntry.t) => {
+    setEditingId(_ => Some(entry.id))
+    setEditGrams(_ => entry.grams->round)
+  }
+
+  let saveEdit = (entry: LogEntry.t) =>
+    switch (logs, Float.fromString(editGrams)) {
+    | (Some(logRepo), Some(g)) if g > 0. =>
+      logRepo.add(LogEntry.rescale(entry, g))
+      ->Promise.thenResolve(_ => {
+        setEditingId(_ => None)
+        refreshToday(logRepo)
+      })
+      ->ignore
+    | _ => ()
+    }
+
   let total = Macros.sum(todayEntries->Array.map(e => e.macros))
 
   <>
@@ -135,11 +160,39 @@ let make = () => {
               {todayEntries
               ->Array.map((entry: LogEntry.t) =>
                 <li key={entry.id}>
-                  <div className="logged">
-                    {React.string(
-                      `${entry.foodName} — ${entry.grams->round} g · ${entry.macros.kcal->round} kcal`,
-                    )}
-                  </div>
+                  {editingId == Some(entry.id)
+                    ? <div className="logged edit-row">
+                        <input
+                          type_="number"
+                          value={editGrams}
+                          onChange={e => setEditGrams(_ => (e->ReactEvent.Form.target)["value"])}
+                        />
+                        {React.string(" g ")}
+                        <button className="primary" onClick={_ => saveEdit(entry)}>
+                          {React.string("Save")}
+                        </button>
+                        <button className="link" onClick={_ => setEditingId(_ => None)}>
+                          {React.string("Cancel")}
+                        </button>
+                      </div>
+                    : <div className="logged log-row">
+                        <span>
+                          {React.string(
+                            `${entry.foodName} — ${entry.grams->round} g · ${entry.macros.kcal->round} kcal`,
+                          )}
+                        </span>
+                        <span className="row-actions">
+                          <button className="link" onClick={_ => startEdit(entry)}>
+                            {React.string("Edit")}
+                          </button>
+                          <button
+                            className="link danger"
+                            ariaLabel="Remove"
+                            onClick={_ => removeEntry(entry.id)}>
+                            {React.string("✕")}
+                          </button>
+                        </span>
+                      </div>}
                 </li>
               )
               ->React.array}

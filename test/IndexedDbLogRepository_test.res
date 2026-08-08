@@ -19,3 +19,14 @@ testAsync("adds entries and lists them by day", async () => {
   let today = await repo.listByDay("2026-08-07")
   expect(Array.length(today))->toBe(2)
 })
+
+testAsync("removes an entry by id", async () => {
+  let repo = await IndexedDbLogRepository.make()
+  await repo.add(entry("keep", "2026-09-01"))
+  await repo.add(entry("drop", "2026-09-01"))
+  await repo.remove("drop")
+
+  let remaining = await repo.listByDay("2026-09-01")
+  expect(Array.length(remaining))->toBe(1)
+  expect((remaining->Array.getUnsafe(0)).id)->toBe("keep")
+})

@@ -26,4 +26,11 @@ let add = (a: t, b: t): t => {
   fat: a.fat +. b.fat,
 }
 
+let scale = (m: t, factor: float): t => {
+  kcal: m.kcal *. factor,
+  protein: m.protein *. factor,
+  carbs: m.carbs *. factor,
+  fat: m.fat *. factor,
+}
+
 let sum = (items: array<t>): t => items->Array.reduce(zero, add)

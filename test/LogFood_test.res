@@ -17,6 +17,7 @@ testAsync("logs a food with macros scaled to the quantity", async () => {
   let repository: LogRepository.t = {
     add: async entry => added := Array.concat(added.contents, [entry]),
     listByDay: async _ => [],
+    remove: async _ => (),
   }
 
   let entry = await LogFood.run(~repository, ~id="e1", ~food, ~grams=200., ~day="2026-08-07")

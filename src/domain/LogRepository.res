@@ -3,4 +3,5 @@
 type t = {
   add: LogEntry.t => promise<unit>,
   listByDay: string => promise<array<LogEntry.t>>,
+  remove: string => promise<unit>,
 }
