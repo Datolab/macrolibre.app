@@ -145,6 +145,65 @@
         font-weight: 700;
         font-size: 1.05rem;
       }
+      .rings {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0.5rem 0 1.5rem;
+      }
+      .rings svg {
+        width: 200px;
+        height: 200px;
+      }
+      .rings-num {
+        font-size: 24px;
+        font-weight: 800;
+        fill: var(--fg);
+      }
+      .rings-sub {
+        font-size: 11px;
+        fill: var(--muted);
+      }
+      .legend {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .legend-item .dot {
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .onboarding label {
+        display: block;
+        margin: 1.1rem 0 0.25rem;
+        font-weight: 600;
+      }
+      .onboarding input,
+      .onboarding select {
+        display: block;
+        width: 100%;
+        font: inherit;
+        padding: 0.65rem 0.8rem;
+        margin-top: 0.35rem;
+        border-radius: 0.6rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: inherit;
+      }
+      .onboarding button.primary {
+        margin-top: 1.75rem;
+      }
       .backdrop {
         position: fixed;
         inset: 0;

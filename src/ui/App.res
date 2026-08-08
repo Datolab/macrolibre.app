@@ -22,6 +22,8 @@ let make = () => {
   let (grams, setGrams) = React.useState(() => "100")
   let (todayEntries, setTodayEntries) = React.useState(() => ([]: array<LogEntry.t>))
   let (drawerOpen, setDrawerOpen) = React.useState(() => false)
+  let profileStore = LocalStorageProfileStore.make()
+  let (profile, setProfile) = React.useState(() => (None: option<Profile.t>))
 
   let refreshToday = (logRepo: LogRepository.t) =>
     logRepo.listByDay(todayKey())->Promise.thenResolve(e => setTodayEntries(_ => e))->ignore
@@ -44,6 +46,7 @@ let make = () => {
         }
         let entries = await logRepo.listByDay(todayKey())
         setTodayEntries(_ => entries)
+        setProfile(_ => profileStore.load())
         setBooting(_ => false)
       }
     )()->ignore
@@ -82,10 +85,23 @@ let make = () => {
 
   <>
     <Header onMenu={() => setDrawerOpen(_ => true)} />
-    <main>
-      {booting
-        ? <p> {React.string(bootMsg)} </p>
-        : <>
+    {booting
+      ? <main> <p> {React.string(bootMsg)} </p> </main>
+      : switch profile {
+        | None =>
+          <Onboarding
+            onComplete={p => {
+              profileStore.save(p)
+              setProfile(_ => Some(p))
+            }}
+          />
+        | Some(p) =>
+          <main>
+            <MacroRings
+              consumed={total}
+              targets={MacroTargets.fromCalories(p.kcalGoal)}
+              calorieGoal={p.kcalGoal}
+            />
             <input type_="search" placeholder="Search foods…" value={query} onChange={onSearch} />
             <ul>
               {results
@@ -115,11 +131,6 @@ let make = () => {
               </div>
             }}
             <h2> {React.string("Today")} </h2>
-            <p className="totals">
-              {React.string(
-                `${total.kcal->round} kcal · ${total.protein->round} P · ${total.carbs->round} C · ${total.fat->round} F`,
-              )}
-            </p>
             <ul>
               {todayEntries
               ->Array.map((entry: LogEntry.t) =>
@@ -133,8 +144,8 @@ let make = () => {
               )
               ->React.array}
             </ul>
-          </>}
-    </main>
+          </main>
+        }}
     <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(_ => false)} />
   </>
 }
