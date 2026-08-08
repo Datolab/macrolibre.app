@@ -1,17 +1,23 @@
 // IndexedDB adapter implementing FoodRepository (ADR-0002). The `foods_local`
-// store is keyed by id with an index on a normalized search key for <100 ms
-// local search (ADR-0006). Reads are decoded through FoodDecoder (ADR-0003) —
-// nothing from IndexedDB is trusted as a domain type without decoding.
+// store is keyed by id with a *multiEntry* index over the food's word tokens,
+// so search matches any word by prefix (ADR-0006, <100 ms local search). Reads
+// are decoded through FoodDecoder (ADR-0003) — nothing from IndexedDB is
+// trusted as a domain type without decoding.
 
 type db
 type objectStore
 type keyRange
+type storeNames
 
 @module("idb")
 external openDB: (string, int, {"upgrade": db => unit}) => promise<db> = "openDB"
+@get external objectStoreNames: db => storeNames = "objectStoreNames"
+@send external listContains: (storeNames, string) => bool = "contains"
+@send external deleteObjectStore: (db, string) => unit = "deleteObjectStore"
 @send
 external createObjectStore: (db, string, {"keyPath": string}) => objectStore = "createObjectStore"
-@send external createIndex: (objectStore, string, string) => unit = "createIndex"
+@send
+external createIndex: (objectStore, string, string, {"multiEntry": bool}) => unit = "createIndex"
 @send external put: (db, string, JSON.t) => promise<JSON.t> = "put"
 @send
 external getAllFromIndex: (db, string, string, keyRange) => promise<array<JSON.t>> =
@@ -20,7 +26,8 @@ external getAllFromIndex: (db, string, string, keyRange) => promise<array<JSON.t
 @val @scope("IDBKeyRange") external keyRangeBound: (string, string) => keyRange = "bound"
 
 let storeName = "foods_local"
-let indexName = "by_search_key"
+let indexName = "by_token"
+let version = 2
 
 let provenanceBadge = p =>
   switch p {
@@ -30,8 +37,8 @@ let provenanceBadge = p =>
   | Food.UserSubmitted => "user_submitted"
   }
 
-// Encode a domain Food into its stored contract-shaped record, plus the
-// normalized `search_key` the index is built on.
+// Encode a domain Food into its stored contract-shaped record, plus the word
+// tokens (from both names) the multiEntry index is built on.
 let toStoredJson = (food: Food.t): JSON.t => {
   let fields = Dict.make()
   fields->Dict.set("id", JSON.Encode.string(food.id))
@@ -43,18 +50,27 @@ let toStoredJson = (food: Food.t): JSON.t => {
   fields->Dict.set("protein_100g", JSON.Encode.float(food.protein100g))
   fields->Dict.set("carbs_100g", JSON.Encode.float(food.carbs100g))
   fields->Dict.set("fat_100g", JSON.Encode.float(food.fat100g))
-  fields->Dict.set("search_key", JSON.Encode.string(SearchKey.normalize(food.nameEn)))
+  let tokens = Array.concat(
+    SearchKey.tokens(food.nameEn),
+    food.nameEs->Option.mapOr([], SearchKey.tokens),
+  )
+  fields->Dict.set("search_tokens", JSON.Encode.array(tokens->Array.map(JSON.Encode.string)))
   JSON.Encode.object(fields)
 }
 
 let make = async (): FoodRepository.t => {
   let db = await openDB(
     "macrolibre",
-    1,
+    version,
     {
       "upgrade": db => {
+        // Recreate the store so the token index applies to a fresh schema; the
+        // app re-ingests when the store is empty.
+        if db->objectStoreNames->listContains(storeName) {
+          db->deleteObjectStore(storeName)
+        }
         let store = db->createObjectStore(storeName, {"keyPath": "id"})
-        store->createIndex(indexName, "search_key")
+        store->createIndex(indexName, "search_tokens", {"multiEntry": true})
       },
     },
   )
@@ -64,15 +80,24 @@ let make = async (): FoodRepository.t => {
     },
     searchByName: async query => {
       let key = SearchKey.normalize(query)
-      // Prefix range [key, key + high sentinel): all keys starting with `key`.
-      let range = keyRangeBound(key, key ++ String.fromCharCode(0xffff))
-      let rows = await db->getAllFromIndex(storeName, indexName, range)
-      rows->Array.filterMap(row =>
-        switch FoodDecoder.decode(row) {
-        | Ok(food) => Some(food)
-        | Error(_) => None
-        }
-      )
+      if key == "" {
+        []
+      } else {
+        // Prefix range over the token index; a food with several matching tokens
+        // comes back more than once, so dedupe by id.
+        let range = keyRangeBound(key, key ++ String.fromCharCode(0xffff))
+        let rows = await db->getAllFromIndex(storeName, indexName, range)
+        let seen = Dict.make()
+        rows->Array.filterMap(row =>
+          switch FoodDecoder.decode(row) {
+          | Ok(food) if seen->Dict.get(food.id)->Option.isNone => {
+              seen->Dict.set(food.id, true)
+              Some(food)
+            }
+          | _ => None
+          }
+        )
+      }
     },
     count: async () => await db->dbCount(storeName),
   }
