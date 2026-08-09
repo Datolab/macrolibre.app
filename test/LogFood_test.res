@@ -18,9 +18,17 @@ testAsync("logs a food with macros scaled to the quantity", async () => {
     add: async entry => added := Array.concat(added.contents, [entry]),
     listByDay: async _ => [],
     remove: async _ => (),
+    recent: async _ => [],
   }
 
-  let entry = await LogFood.run(~repository, ~id="e1", ~food, ~grams=200., ~day="2026-08-07")
+  let entry = await LogFood.run(
+    ~repository,
+    ~id="e1",
+    ~food,
+    ~grams=200.,
+    ~day="2026-08-07",
+    ~loggedAt=1000.,
+  )
 
   expect(entry.macros.kcal)->toBe(260.) // 130 * 200/100
   expect(entry.foodName)->toBe("Rice")

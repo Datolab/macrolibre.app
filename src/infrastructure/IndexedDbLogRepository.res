@@ -11,6 +11,7 @@ external createObjectStore: (db, string, {"keyPath": string}) => objectStore = "
 @send external createIndex: (objectStore, string, string) => unit = "createIndex"
 @send external put: (db, string, JSON.t) => promise<JSON.t> = "put"
 @send external deleteById: (db, string, string) => promise<unit> = "delete"
+@send external getAll: (db, string) => promise<array<JSON.t>> = "getAll"
 @send
 external getAllFromIndex: (db, string, string, keyRange) => promise<array<JSON.t>> =
   "getAllFromIndex"
@@ -29,6 +30,7 @@ let toJson = (entry: LogEntry.t): JSON.t => {
   fields->Dict.set("carbs", JSON.Encode.float(entry.macros.carbs))
   fields->Dict.set("fat", JSON.Encode.float(entry.macros.fat))
   fields->Dict.set("day", JSON.Encode.string(entry.day))
+  fields->Dict.set("logged_at", JSON.Encode.float(entry.loggedAt))
   JSON.Encode.object(fields)
 }
 
@@ -38,6 +40,8 @@ let fromJson = (json: JSON.t): option<LogEntry.t> => {
   | Some(obj) => {
       let str = k => obj->Dict.get(k)->Option.flatMap(JSON.Decode.string)
       let num = k => obj->Dict.get(k)->Option.flatMap(JSON.Decode.float)
+      // Older entries predate logged_at; default to 0 so they still decode.
+      let loggedAt = num("logged_at")->Option.getOr(0.)
       switch (
         str("id"),
         str("food_name"),
@@ -64,6 +68,7 @@ let fromJson = (json: JSON.t): option<LogEntry.t> => {
           grams,
           macros: {Macros.kcal, protein, carbs, fat},
           day,
+          loggedAt,
         })
       | _ => None
       }
@@ -91,5 +96,19 @@ let make = async (): LogRepository.t => {
       rows->Array.filterMap(fromJson)
     },
     remove: async id => await db->deleteById(storeName, id),
+    recent: async limit => {
+      let all = (await db->getAll(storeName))->Array.filterMap(fromJson)
+      let byRecency = all->Array.toSorted((a, b) => Float.compare(b.loggedAt, a.loggedAt))
+      // Keep the most recent entry per distinct food name.
+      let seen = Dict.make()
+      let unique = []
+      byRecency->Array.forEach(entry =>
+        if seen->Dict.get(entry.foodName)->Option.isNone {
+          seen->Dict.set(entry.foodName, true)
+          unique->Array.push(entry)
+        }
+      )
+      unique->Array.slice(~start=0, ~end=limit)
+    },
   }
 }

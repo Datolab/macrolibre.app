@@ -6,6 +6,7 @@
 let bundleUrl = "/sample-open-base.ndjson.gz"
 
 @val @scope("crypto") external randomUUID: unit => string = "randomUUID"
+@val @scope("Date") external now: unit => float = "now"
 
 let todayKey = () => Date.make()->Date.toISOString->String.slice(~start=0, ~end=10)
 let round = (f: float) => f->Math.round->Float.toString
@@ -26,9 +27,13 @@ let make = () => {
   let (profile, setProfile) = React.useState(() => (None: option<Profile.t>))
   let (editingId, setEditingId) = React.useState(() => (None: option<string>))
   let (editGrams, setEditGrams) = React.useState(() => "")
+  let (recent, setRecent) = React.useState(() => ([]: array<LogEntry.t>))
 
-  let refreshToday = (logRepo: LogRepository.t) =>
+  // Refresh both log-derived views (today's entries + the quick-add recents).
+  let refreshToday = (logRepo: LogRepository.t) => {
     logRepo.listByDay(todayKey())->Promise.thenResolve(e => setTodayEntries(_ => e))->ignore
+    logRepo.recent(8)->Promise.thenResolve(r => setRecent(_ => r))->ignore
+  }
 
   // Boot: open repositories, auto-ingest the dataset on first run, load today.
   React.useEffect0(() => {
@@ -48,6 +53,8 @@ let make = () => {
         }
         let entries = await logRepo.listByDay(todayKey())
         setTodayEntries(_ => entries)
+        let recentFoods = await logRepo.recent(8)
+        setRecent(_ => recentFoods)
         setProfile(_ => profileStore.load())
         setBooting(_ => false)
       }
@@ -71,7 +78,14 @@ let make = () => {
     | Some(logRepo) =>
       switch Float.fromString(grams) {
       | Some(g) if g > 0. =>
-        LogFood.run(~repository=logRepo, ~id=randomUUID(), ~food, ~grams=g, ~day=todayKey())
+        LogFood.run(
+          ~repository=logRepo,
+          ~id=randomUUID(),
+          ~food,
+          ~grams=g,
+          ~day=todayKey(),
+          ~loggedAt=now(),
+        )
         ->Promise.thenResolve(_ => {
           setSelected(_ => None)
           setQuery(_ => "")
@@ -81,6 +95,16 @@ let make = () => {
         ->ignore
       | _ => ()
       }
+    }
+
+  // Quick-add: re-log a recent food at its last quantity in one tap.
+  let relog = (entry: LogEntry.t) =>
+    switch logs {
+    | Some(logRepo) =>
+      logRepo.add({...entry, id: randomUUID(), day: todayKey(), loggedAt: now()})
+      ->Promise.thenResolve(_ => refreshToday(logRepo))
+      ->ignore
+    | None => ()
     }
 
   let removeEntry = id =>
@@ -127,6 +151,20 @@ let make = () => {
               targets={MacroTargets.fromCalories(p.kcalGoal)}
               calorieGoal={p.kcalGoal}
             />
+            {Array.length(recent) == 0
+              ? React.null
+              : <div className="quick-add">
+                  <h2> {React.string("Quick add")} </h2>
+                  <div className="chips">
+                    {recent
+                    ->Array.map((entry: LogEntry.t) =>
+                      <button key={entry.id} className="chip" onClick={_ => relog(entry)}>
+                        {React.string(`${entry.foodName} · ${entry.grams->round} g`)}
+                      </button>
+                    )
+                    ->React.array}
+                  </div>
+                </div>}
             <input type_="search" placeholder="Search foods…" value={query} onChange={onSearch} />
             <ul>
               {results

@@ -6,6 +6,7 @@ type t = {
   grams: float,
   macros: Macros.t,
   day: string, // YYYY-MM-DD
+  loggedAt: float, // epoch ms, for recency ordering
 }
 
 // Change the logged quantity, rescaling the macros proportionally. No need for

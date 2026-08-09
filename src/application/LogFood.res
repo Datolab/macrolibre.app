@@ -6,6 +6,7 @@ let run = async (
   ~food: Food.t,
   ~grams: float,
   ~day: string,
+  ~loggedAt: float,
 ): LogEntry.t => {
   let entry: LogEntry.t = {
     id,
@@ -13,6 +14,7 @@ let run = async (
     grams,
     macros: Macros.forQuantity(food, grams),
     day,
+    loggedAt,
   }
   await repository.add(entry)
   entry

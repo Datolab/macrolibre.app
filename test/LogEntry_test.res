@@ -6,6 +6,7 @@ let entry: LogEntry.t = {
   grams: 100.,
   macros: {Macros.kcal: 130., protein: 2.7, carbs: 28., fat: 0.3},
   day: "2026-08-07",
+  loggedAt: 0.,
 }
 
 test("rescales macros proportionally when the grams change", () => {
