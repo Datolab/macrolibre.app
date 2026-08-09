@@ -28,6 +28,7 @@ let make = () => {
   let (editingId, setEditingId) = React.useState(() => (None: option<string>))
   let (editGrams, setEditGrams) = React.useState(() => "")
   let (recent, setRecent) = React.useState(() => ([]: array<LogEntry.t>))
+  let (showCustom, setShowCustom) = React.useState(() => false)
 
   // Refresh both log-derived views (today's entries + the quick-add recents).
   let refreshToday = (logRepo: LogRepository.t) => {
@@ -166,17 +167,39 @@ let make = () => {
                   </div>
                 </div>}
             <input type_="search" placeholder="Search foods…" value={query} onChange={onSearch} />
-            <ul>
-              {results
-              ->Array.map((food: Food.t) =>
-                <li key={food.id}>
-                  <button className="food-row" onClick={_ => setSelected(_ => Some(food))}>
-                    {React.string(`${food.nameEn} — ${food.kcal100g->round} kcal/100 g`)}
+            {showCustom
+              ? <CustomFoodForm
+                  onCancel={() => setShowCustom(_ => false)}
+                  onSave={food =>
+                    switch foods {
+                    | Some(foodRepo) =>
+                      foodRepo.upsertMany([food])
+                      ->Promise.thenResolve(_ => {
+                        setShowCustom(_ => false)
+                        setQuery(_ => "")
+                        setResults(_ => [])
+                        setSelected(_ => Some(food)) // ready to log right away
+                      })
+                      ->ignore
+                    | None => ()
+                    }}
+                />
+              : <>
+                  <button className="link add-custom" onClick={_ => setShowCustom(_ => true)}>
+                    {React.string("＋ Add a custom food")}
                   </button>
-                </li>
-              )
-              ->React.array}
-            </ul>
+                  <ul>
+                    {results
+                    ->Array.map((food: Food.t) =>
+                      <li key={food.id}>
+                        <button className="food-row" onClick={_ => setSelected(_ => Some(food))}>
+                          {React.string(`${food.nameEn} — ${food.kcal100g->round} kcal/100 g`)}
+                        </button>
+                      </li>
+                    )
+                    ->React.array}
+                  </ul>
+                </>}
             {switch selected {
             | None => React.null
             | Some(food) =>
