@@ -32,6 +32,14 @@ let make = () => {
   let (showScanner, setShowScanner) = React.useState(() => false)
   let (scanStatus, setScanStatus) = React.useState(() => "")
   let barcodeLookup = OffBarcodeLookup.make()
+  let (templateRepo, setTemplateRepo) = React.useState(() => (None: option<TemplateRepository.t>))
+  let (templates, setTemplates) = React.useState(() => ([]: array<MealTemplate.t>))
+  // None = not composing a template; Some(items) = building one, accumulating items.
+  let (building, setBuilding) = React.useState(() => (None: option<array<MealTemplate.item>>))
+  let (templateName, setTemplateName) = React.useState(() => "")
+
+  let refreshTemplates = (repo: TemplateRepository.t) =>
+    repo.listAll()->Promise.thenResolve(ts => setTemplates(_ => ts))->ignore
 
   // Refresh both log-derived views (today's entries + the quick-add recents).
   let refreshToday = (logRepo: LogRepository.t) => {
@@ -45,8 +53,10 @@ let make = () => {
       async () => {
         let foodRepo = await IndexedDbFoodRepository.make()
         let logRepo = await IndexedDbLogRepository.make()
+        let templRepo = await IndexedDbTemplateRepository.make()
         setFoods(_ => Some(foodRepo))
         setLogs(_ => Some(logRepo))
+        setTemplateRepo(_ => Some(templRepo))
 
         let existing = await foodRepo.count()
         if existing == 0 {
@@ -59,6 +69,8 @@ let make = () => {
         setTodayEntries(_ => entries)
         let recentFoods = await logRepo.recent(8)
         setRecent(_ => recentFoods)
+        let savedTemplates = await templRepo.listAll()
+        setTemplates(_ => savedTemplates)
         setProfile(_ => profileStore.load())
         setBooting(_ => false)
       }
@@ -99,6 +111,74 @@ let make = () => {
         ->ignore
       | _ => ()
       }
+    }
+
+  // Template building: accumulate {food, grams} as a template item, using the
+  // same search/select/grams picker as logging, instead of logging it now.
+  let addItemToBuilding = (food: Food.t) =>
+    switch (building, Float.fromString(grams)) {
+    | (Some(items), Some(g)) if g > 0. =>
+      let item: MealTemplate.item = {
+        foodId: food.id,
+        foodName: food.nameEn,
+        grams: g,
+        macros: Macros.forQuantity(food, g),
+      }
+      setBuilding(_ => Some(Array.concat(items, [item])))
+      setSelected(_ => None)
+      setQuery(_ => "")
+      setResults(_ => [])
+    | _ => ()
+    }
+
+  let removeBuildingItem = index =>
+    switch building {
+    | Some(items) => setBuilding(_ => Some(items->Array.filterWithIndex((_, i) => i != index)))
+    | None => ()
+    }
+
+  let startBuilding = () => setBuilding(_ => Some([]))
+
+  let cancelBuilding = () => {
+    setBuilding(_ => None)
+    setTemplateName(_ => "")
+  }
+
+  let saveTemplate = () =>
+    switch (building, templateRepo) {
+    | (Some(items), Some(repo)) if Array.length(items) > 0 && templateName->String.trim != "" =>
+      let template: MealTemplate.t = {id: randomUUID(), name: templateName->String.trim, items}
+      repo
+      .add(template)
+      ->Promise.thenResolve(_ => {
+        setBuilding(_ => None)
+        setTemplateName(_ => "")
+        refreshTemplates(repo)
+      })
+      ->ignore
+    | _ => ()
+    }
+
+  // Log every item of a saved template to today in one action (FR-A).
+  let logTemplate = (template: MealTemplate.t) =>
+    switch logs {
+    | Some(logRepo) =>
+      LogMealTemplate.run(
+        ~repository=logRepo,
+        ~template,
+        ~ids=template.items->Array.map(_ => randomUUID()),
+        ~day=todayKey(),
+        ~loggedAt=now(),
+      )
+      ->Promise.thenResolve(_ => refreshToday(logRepo))
+      ->ignore
+    | None => ()
+    }
+
+  let deleteTemplate = id =>
+    switch templateRepo {
+    | Some(repo) => repo.remove(id)->Promise.thenResolve(_ => refreshTemplates(repo))->ignore
+    | None => ()
     }
 
   // Quick-add: re-log a recent food at its last quantity in one tap.
@@ -191,6 +271,64 @@ let make = () => {
                     ->React.array}
                   </div>
                 </div>}
+            <div className="templates">
+              <h2> {React.string("Templates")} </h2>
+              {Array.length(templates) == 0
+                ? React.null
+                : <div className="chips">
+                    {templates
+                    ->Array.map((template: MealTemplate.t) =>
+                      <span key={template.id} className="chip-group">
+                        <button className="chip" onClick={_ => logTemplate(template)}>
+                          {React.string(`▤ ${template.name}`)}
+                        </button>
+                        <button
+                          className="link danger"
+                          ariaLabel={`Delete ${template.name}`}
+                          onClick={_ => deleteTemplate(template.id)}>
+                          {React.string("✕")}
+                        </button>
+                      </span>
+                    )
+                    ->React.array}
+                  </div>}
+              {switch building {
+              | None =>
+                <button className="link" onClick={_ => startBuilding()}>
+                  {React.string("+ New template")}
+                </button>
+              | Some(items) =>
+                <div className="template-builder">
+                  <p> {React.string("Search a food below and add it to this template.")} </p>
+                  <ul>
+                    {items
+                    ->Array.mapWithIndex((item: MealTemplate.item, i) =>
+                      <li key={`${item.foodId}-${i->Int.toString}`}>
+                        <span>
+                          {React.string(`${item.foodName} — ${item.grams->round} g`)}
+                        </span>
+                        <button
+                          className="link danger" ariaLabel="Remove" onClick={_ => removeBuildingItem(i)}>
+                          {React.string("✕")}
+                        </button>
+                      </li>
+                    )
+                    ->React.array}
+                  </ul>
+                  <input
+                    placeholder="Template name (e.g. Breakfast)"
+                    value={templateName}
+                    onChange={e => setTemplateName(_ => (e->ReactEvent.Form.target)["value"])}
+                  />
+                  <button className="primary" onClick={_ => saveTemplate()}>
+                    {React.string("Save template")}
+                  </button>
+                  <button className="link" onClick={_ => cancelBuilding()}>
+                    {React.string("Cancel")}
+                  </button>
+                </div>
+              }}
+            </div>
             <input type_="search" placeholder="Search foods…" value={query} onChange={onSearch} />
             {showScanner
               ? <BarcodeScanner onDetected={onBarcode} onClose={() => setShowScanner(_ => false)} />
@@ -244,9 +382,16 @@ let make = () => {
                   onChange={e => setGrams(_ => (e->ReactEvent.Form.target)["value"])}
                 />
                 {React.string(" g ")}
-                <button className="primary" onClick={_ => addToday(food)}>
-                  {React.string("Add to today")}
-                </button>
+                {switch building {
+                | Some(_) =>
+                  <button className="primary" onClick={_ => addItemToBuilding(food)}>
+                    {React.string("Add to template")}
+                  </button>
+                | None =>
+                  <button className="primary" onClick={_ => addToday(food)}>
+                    {React.string("Add to today")}
+                  </button>
+                }}
               </div>
             }}
             <h2> {React.string("Today")} </h2>
