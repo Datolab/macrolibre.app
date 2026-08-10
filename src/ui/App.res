@@ -29,6 +29,9 @@ let make = () => {
   let (editGrams, setEditGrams) = React.useState(() => "")
   let (recent, setRecent) = React.useState(() => ([]: array<LogEntry.t>))
   let (showCustom, setShowCustom) = React.useState(() => false)
+  let (showScanner, setShowScanner) = React.useState(() => false)
+  let (scanStatus, setScanStatus) = React.useState(() => "")
+  let barcodeLookup = OffBarcodeLookup.make()
 
   // Refresh both log-derived views (today's entries + the quick-add recents).
   let refreshToday = (logRepo: LogRepository.t) => {
@@ -108,6 +111,28 @@ let make = () => {
     | None => ()
     }
 
+  // A scanned barcode: look it up online (OFF), cache it in foods_local, and
+  // select it ready to log. Not found -> a message.
+  let onBarcode = barcode => {
+    setShowScanner(_ => false)
+    setScanStatus(_ => "Looking up…")
+    barcodeLookup.lookup(barcode)
+    ->Promise.thenResolve(result =>
+      switch (result, foods) {
+      | (Some(food), Some(foodRepo)) =>
+        foodRepo.upsertMany([food])
+        ->Promise.thenResolve(_ => {
+          setScanStatus(_ => "")
+          setSelected(_ => Some(food))
+        })
+        ->ignore
+      | (None, _) => setScanStatus(_ => `No product found for barcode ${barcode}`)
+      | _ => ()
+      }
+    )
+    ->ignore
+  }
+
   let removeEntry = id =>
     switch logs {
     | Some(logRepo) => logRepo.remove(id)->Promise.thenResolve(_ => refreshToday(logRepo))->ignore
@@ -167,7 +192,9 @@ let make = () => {
                   </div>
                 </div>}
             <input type_="search" placeholder="Search foods…" value={query} onChange={onSearch} />
-            {showCustom
+            {showScanner
+              ? <BarcodeScanner onDetected={onBarcode} onClose={() => setShowScanner(_ => false)} />
+              : showCustom
               ? <CustomFoodForm
                   onCancel={() => setShowCustom(_ => false)}
                   onSave={food =>
@@ -185,9 +212,15 @@ let make = () => {
                     }}
                 />
               : <>
-                  <button className="link add-custom" onClick={_ => setShowCustom(_ => true)}>
-                    {React.string("＋ Add a custom food")}
-                  </button>
+                  <div className="search-actions">
+                    <button className="link" onClick={_ => setShowScanner(_ => true)}>
+                      {React.string("▣ Scan barcode")}
+                    </button>
+                    <button className="link" onClick={_ => setShowCustom(_ => true)}>
+                      {React.string("＋ Add a custom food")}
+                    </button>
+                  </div>
+                  {scanStatus == "" ? React.null : <p className="scan-status"> {React.string(scanStatus)} </p>}
                   <ul>
                     {results
                     ->Array.map((food: Food.t) =>

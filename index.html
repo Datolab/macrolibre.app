@@ -175,8 +175,32 @@
         flex-wrap: wrap;
         margin: 0.75rem 0;
       }
-      .add-custom {
+      .search-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin: 0.25rem 0 0.5rem;
+      }
+      .scan-status {
+        color: var(--muted);
         margin: 0.25rem 0 0.75rem;
+      }
+      .scanner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+      }
+      .scan-video {
+        width: 100%;
+        max-height: 320px;
+        object-fit: cover;
+        border-radius: 0.75rem;
+        background: #000;
+      }
+      .scan-hint {
+        color: var(--muted);
+        margin: 0;
       }
       .custom-form label {
         display: block;
