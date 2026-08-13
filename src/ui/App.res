@@ -39,9 +39,24 @@ let make = () => {
   // None = not composing a template; Some(items) = building one, accumulating items.
   let (building, setBuilding) = React.useState(() => (None: option<array<MealTemplate.item>>))
   let (templateName, setTemplateName) = React.useState(() => "")
+  let (weightRepo, setWeightRepo) = React.useState(() => (None: option<WeightRepository.t>))
+  let (todayWeightInput, setTodayWeightInput) = React.useState(() => "")
+  let (adjustment, setAdjustment) = React.useState(() => (None: option<TargetAdjustment.t>))
 
   let refreshTemplates = (repo: TemplateRepository.t) =>
     repo.listAll()->Promise.thenResolve(ts => setTemplates(_ => ts))->ignore
+
+  // Day-ascending strings for the trailing 7 days ending today, matching the
+  // ~7700 kcal/kg "days" the weekly adjustment expects.
+  let last7Days = () => {
+    let todayMs = now()
+    Array.make(~length=7, 0)->Array.mapWithIndex((_, i) =>
+      (todayMs -. (6 - i)->Int.toFloat *. 86400000.)
+      ->Date.fromTime
+      ->Date.toISOString
+      ->String.slice(~start=0, ~end=10)
+    )
+  }
 
   // Refresh both log-derived views (today's entries + the quick-add recents).
   let refreshToday = (logRepo: LogRepository.t) => {
@@ -56,9 +71,11 @@ let make = () => {
         let foodRepo = await IndexedDbFoodRepository.make()
         let logRepo = await IndexedDbLogRepository.make()
         let templRepo = await IndexedDbTemplateRepository.make()
+        let weightRepository = await IndexedDbWeightRepository.make()
         setFoods(_ => Some(foodRepo))
         setLogs(_ => Some(logRepo))
         setTemplateRepo(_ => Some(templRepo))
+        setWeightRepo(_ => Some(weightRepository))
 
         let existing = await foodRepo.count()
         if existing == 0 {
@@ -185,6 +202,46 @@ let make = () => {
     | None => ()
     }
 
+  // FR-D-2: record today's weigh-in.
+  let recordWeight = () =>
+    switch (weightRepo, WeightEntry.build(~kg=Float.fromString(todayWeightInput)->Option.getOr(-1.), ~day=todayKey(), ~loggedAt=now())) {
+    | (Some(repo), Some(entry)) =>
+      repo.record(entry)->Promise.thenResolve(_ => setTodayWeightInput(_ => ""))->ignore
+    | _ => ()
+    }
+
+  // FR-D-3: compute (not apply) this week's proposed target.
+  let reviewAdjustment = () =>
+    switch (weightRepo, logs, profile) {
+    | (Some(wRepo), Some(logRepo), Some(p)) =>
+      ComputeWeeklyAdjustment.run(
+        ~weightRepo=wRepo,
+        ~logRepo,
+        ~last7Days=last7Days(),
+        ~previousGoalKcal=p.kcalGoal,
+        ~goal=p.goal,
+      )
+      ->Promise.thenResolve(result => setAdjustment(_ => Some(result)))
+      ->ignore
+    | _ => ()
+    }
+
+  // FR-D-5: applying a proposal becomes the new baseline the next weekly
+  // review compares against — no separate "resume from override" bookkeeping
+  // needed, since the use case always reads the current Profile.kcalGoal.
+  let applyAdjustment = proposedGoalKcal =>
+    switch profile {
+    | Some(p) => {
+        let updated = {...p, kcalGoal: proposedGoalKcal}
+        profileStore.save(updated)
+        setProfile(_ => Some(updated))
+        setAdjustment(_ => None)
+      }
+    | None => ()
+    }
+
+  let dismissAdjustment = () => setAdjustment(_ => None)
+
   // Quick-add: re-log a recent food at its last quantity in one tap.
   let relog = (entry: LogEntry.t) =>
     switch logs {
@@ -261,6 +318,24 @@ let make = () => {
               targets={MacroTargets.fromCalories(p.kcalGoal)}
               calorieGoal={p.kcalGoal}
             />
+            <div className="weight-section">
+              <input
+                type_="number"
+                placeholder="Today's weight (kg)"
+                value={todayWeightInput}
+                onChange={e => setTodayWeightInput(_ => (e->ReactEvent.Form.target)["value"])}
+              />
+              <button className="link" onClick={_ => recordWeight()}>
+                {React.string("Log weight")}
+              </button>
+              <button className="link" onClick={_ => reviewAdjustment()}>
+                {React.string("Review weekly adjustment")}
+              </button>
+            </div>
+            {switch adjustment {
+            | None => React.null
+            | Some(a) => <AdjustmentCard adjustment={a} onApply={applyAdjustment} onDismiss={dismissAdjustment} />
+            }}
             {Array.length(recent) == 0
               ? React.null
               : <div className="quick-add">

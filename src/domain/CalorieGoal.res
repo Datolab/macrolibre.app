@@ -6,10 +6,6 @@ let recommend = (~heightCm: float, ~weightKg: float, ~goal: Goal.t): int => {
   // Mifflin–St Jeor with age 30 and a sex-neutral constant (avg of +5 / -161).
   let bmr = 10. *. weightKg +. 6.25 *. heightCm -. 228.
   let tdee = bmr *. 1.4 // lightly active
-  let adjusted = switch goal {
-  | Goal.Lose => tdee -. 500.
-  | Goal.Maintain => tdee
-  | Goal.Gain => tdee +. 400.
-  }
+  let adjusted = tdee +. Goal.kcalOffset(goal)
   adjusted->Math.round->Int.fromFloat
 }

@@ -25,3 +25,13 @@ let label = g =>
   | Maintain => "Maintain"
   | Gain => "Gain weight"
   }
+
+// Daily calorie offset from TDEE for each goal — shared by the onboarding
+// estimate (CalorieGoal) and the weekly adaptation engine (TargetAdjustment),
+// so both express the same deficit/surplus philosophy from one source.
+let kcalOffset = g =>
+  switch g {
+  | Lose => -500.
+  | Maintain => 0.
+  | Gain => 400.
+  }
