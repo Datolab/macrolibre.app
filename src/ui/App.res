@@ -21,6 +21,7 @@ let make = () => {
   let (results, setResults) = React.useState(() => ([]: array<Food.t>))
   let (selected, setSelected) = React.useState(() => (None: option<Food.t>))
   let (grams, setGrams) = React.useState(() => "100")
+  let (unit, setUnit) = React.useState(() => PortionUnit.Grams)
   let (todayEntries, setTodayEntries) = React.useState(() => ([]: array<LogEntry.t>))
   let (drawerOpen, setDrawerOpen) = React.useState(() => false)
   let profileStore = LocalStorageProfileStore.make()
@@ -30,6 +31,7 @@ let make = () => {
   let (recent, setRecent) = React.useState(() => ([]: array<LogEntry.t>))
   let (showCustom, setShowCustom) = React.useState(() => false)
   let (showScanner, setShowScanner) = React.useState(() => false)
+  let (showRawAdd, setShowRawAdd) = React.useState(() => false)
   let (scanStatus, setScanStatus) = React.useState(() => "")
   let barcodeLookup = OffBarcodeLookup.make()
   let (templateRepo, setTemplateRepo) = React.useState(() => (None: option<TemplateRepository.t>))
@@ -93,7 +95,8 @@ let make = () => {
     | None => ()
     | Some(logRepo) =>
       switch Float.fromString(grams) {
-      | Some(g) if g > 0. =>
+      | Some(q) if q > 0. =>
+        let g = PortionUnit.toGrams(unit, q)
         LogFood.run(
           ~repository=logRepo,
           ~id=randomUUID(),
@@ -117,7 +120,8 @@ let make = () => {
   // same search/select/grams picker as logging, instead of logging it now.
   let addItemToBuilding = (food: Food.t) =>
     switch (building, Float.fromString(grams)) {
-    | (Some(items), Some(g)) if g > 0. =>
+    | (Some(items), Some(q)) if q > 0. =>
+      let g = PortionUnit.toGrams(unit, q)
       let item: MealTemplate.item = {
         foodId: food.id,
         foodName: food.nameEn,
@@ -349,6 +353,22 @@ let make = () => {
                     | None => ()
                     }}
                 />
+              : showRawAdd
+              ? <RawMacroForm
+                  day={todayKey()}
+                  onCancel={() => setShowRawAdd(_ => false)}
+                  onSave={entry =>
+                    switch logs {
+                    | Some(logRepo) =>
+                      logRepo.add(entry)
+                      ->Promise.thenResolve(_ => {
+                        setShowRawAdd(_ => false)
+                        refreshToday(logRepo)
+                      })
+                      ->ignore
+                    | None => ()
+                    }}
+                />
               : <>
                   <div className="search-actions">
                     <button className="link" onClick={_ => setShowScanner(_ => true)}>
@@ -357,6 +377,11 @@ let make = () => {
                     <button className="link" onClick={_ => setShowCustom(_ => true)}>
                       {React.string("＋ Add a custom food")}
                     </button>
+                    {building == None
+                      ? <button className="link" onClick={_ => setShowRawAdd(_ => true)}>
+                          {React.string("⌁ Quick-add macros")}
+                        </button>
+                      : React.null}
                   </div>
                   {scanStatus == "" ? React.null : <p className="scan-status"> {React.string(scanStatus)} </p>}
                   <ul>
@@ -381,7 +406,15 @@ let make = () => {
                   value={grams}
                   onChange={e => setGrams(_ => (e->ReactEvent.Form.target)["value"])}
                 />
-                {React.string(" g ")}
+                <select
+                  value={unit->PortionUnit.label}
+                  onChange={e => {
+                    let v = (e->ReactEvent.Form.target)["value"]
+                    setUnit(_ => v == "oz" ? PortionUnit.Ounces : PortionUnit.Grams)
+                  }}>
+                  <option value="g"> {React.string("g")} </option>
+                  <option value="oz"> {React.string("oz")} </option>
+                </select>
                 {switch building {
                 | Some(_) =>
                   <button className="primary" onClick={_ => addItemToBuilding(food)}>
