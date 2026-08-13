@@ -4,23 +4,33 @@ Source of truth: `../srs-macrotracker-mvp.md` (workspace root), scoped here to
 what `macrolibre.app` (the client) owns. Items owned by the `datocal.com` platform
 are noted as external dependencies, not client work.
 
-Status: **planning** — no code yet. Milestone dates below are targets from the
-SRS, not commitments.
+Status: **M1 complete, M2 in progress.** Milestone dates below are targets
+from the SRS, not commitments.
 
 ## M1 — Foundation (2026-09-01, ~3 weeks)
 
-- [ ] Repo scaffolding, CI, PWA shell, IndexedDB layer
-- [ ] Consume the open base dataset (built + published by `datocal.com`, not this repo)
+- [x] Repo scaffolding, CI, PWA shell, IndexedDB layer
+- [ ] Consume the open base dataset (built + published by `datocal.com`, not this repo) —
+      ingestion pipeline (`BundleFetcher`/`IngestBundle`, auto-ingest on first run) is done and
+      tested, but it still points at a committed sample bundle; depends on `datocal.com`
+      actually hosting a real one (see its ADR-0008/ADR-0009, accepted but not yet deployed)
 
 **Done when:** PWA installs offline on iOS/Android/desktop browsers; local
 search over the bundled dataset is < 100 ms; public repo live with CI green.
 
 ## M2 — Logging Core (~4 weeks after M1's dataset dependency lands)
 
-- [ ] Text search, barcode scan, quick-add, favorites, custom foods/templates (FR-A-1..7)
+- [x] Text search (FR-A-1), barcode scan (FR-A-3, verified on a real device), custom
+      foods/meal templates + one-tap re-log (FR-A-4), quick-add raw macros (FR-A-5),
+      offline logging (FR-A-6), grams/oz portion units (FR-A-7 — regional units like
+      unidad/taza/cucharada deliberately deferred; they need per-food serving data the
+      bundled dataset doesn't carry, and a generic conversion would just be wrong)
+- [ ] Verified-DB federated search (FR-A-2) — blocked on `datocal.com`'s Verified DB API (M3)
 
 **Done when:** all FR-A "Must" requirements pass QA, including camera barcode
-scan on iOS Safari; internal dogfood median log time ≤ 7 s.
+scan on iOS Safari; internal dogfood median log time ≤ 7 s. FR-A-1/3/4/5/6/7 are
+implemented and tested; FR-A-2 can't land until `datocal.com` ships M3. iOS-Safari-specific
+QA and the dogfood median-log-time metric haven't been run yet.
 
 ## M3 — Data Service *(external dependency, not client work)*
 
