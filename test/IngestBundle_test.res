@@ -9,6 +9,8 @@ testAsync("ingests decoded foods into the repository and reports counts", async 
     upsertMany: async foods => stored := foods,
     searchByName: async _ => [],
     count: async () => 0,
+    remove: async _ => (),
+    all: async () => stored.contents,
   }
 
   let ndjson = [line("1", "Rice"), `garbage`, line("2", "Beans")]->Array.join("\n")

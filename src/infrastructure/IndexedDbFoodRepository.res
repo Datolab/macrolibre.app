@@ -19,6 +19,8 @@ external createObjectStore: (db, string, {"keyPath": string}) => objectStore = "
 @send
 external createIndex: (objectStore, string, string, {"multiEntry": bool}) => unit = "createIndex"
 @send external put: (db, string, JSON.t) => promise<JSON.t> = "put"
+@send external deleteById: (db, string, string) => promise<unit> = "delete"
+@send external getAll: (db, string) => promise<array<JSON.t>> = "getAll"
 @send
 external getAllFromIndex: (db, string, string, keyRange) => promise<array<JSON.t>> =
   "getAllFromIndex"
@@ -100,5 +102,15 @@ let make = async (): FoodRepository.t => {
       }
     },
     count: async () => await db->dbCount(storeName),
+    remove: async id => await db->deleteById(storeName, id),
+    all: async () => {
+      let rows = await db->getAll(storeName)
+      rows->Array.filterMap(row =>
+        switch FoodDecoder.decode(row) {
+        | Ok(food) => Some(food)
+        | Error(_) => None
+        }
+      )
+    },
   }
 }
