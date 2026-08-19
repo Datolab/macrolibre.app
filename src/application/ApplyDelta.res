@@ -15,7 +15,7 @@ type outcome =
   | Applied({version: string, recordCount: int})
   | Rejected(string)
 
-let run = async (~repository: FoodRepository.t, ~delta: DatasetDelta.t): outcome => {
+let applyVerified = async (~repository: FoodRepository.t, ~delta: DatasetDelta.t): outcome => {
   let existing = await repository.all()
 
   // A full snapshot replaces everything; a delta layers onto what's there.
@@ -42,5 +42,26 @@ let run = async (~repository: FoodRepository.t, ~delta: DatasetDelta.t): outcome
     let _ = await toDelete->Array.map(food => repository.remove(food.Food.id))->Promise.all
     await repository.upsertMany(delta.changed)
     Applied({version: delta.toVersion, recordCount: Array.length(prospective)})
+  }
+}
+
+// Signature checking is injected rather than called directly so this use case
+// stays free of crypto and of any decision about which key to trust — that
+// belongs to the caller (see DeltaSignature).
+let run = async (
+  ~repository: FoodRepository.t,
+  ~delta: DatasetDelta.t,
+  ~verifySignature: DatasetDelta.t => promise<bool>,
+): outcome => {
+  // Authenticity first (FR-C-3). The digest check only proves the payload is
+  // internally consistent, which whoever forged it can arrange; it is not a
+  // substitute for knowing who produced it.
+  let authentic = await verifySignature(delta)
+  if !authentic {
+    Rejected(
+      `Signature on ${delta.toVersion} is not from the trusted release key. Nothing was written.`,
+    )
+  } else {
+    await applyVerified(~repository, ~delta)
   }
 }

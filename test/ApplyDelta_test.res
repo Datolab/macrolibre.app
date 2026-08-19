@@ -49,6 +49,34 @@ let delta = (~from=Some("v2026.08"), ~checksum, ~changed, ~removed): DatasetDelt
   removed,
 }
 
+// Signature checking is injected so these tests exercise orchestration, not
+// crypto; DeltaSignature_test pins the real verification against the producer.
+let trusts = _ => Promise.resolve(true)
+let distrusts = _ => Promise.resolve(false)
+
+testAsync("refuses a delta whose signature does not verify, before writing", async () => {
+  // FR-C-3: the digest alone only proves the payload is self-consistent, which
+  // whoever authored a forged payload can arrange. Authenticity has to gate the
+  // write, so a correct-looking digest must not rescue a bad signature.
+  let (repo, stored, writes) = makeRepo([rice, beans])
+  let expected = await DatasetDigest.compute([rice, beans, corn])
+
+  let outcome = await ApplyDelta.run(
+    ~repository=repo,
+    ~delta=delta(~checksum=expected, ~changed=[corn], ~removed=[]),
+    ~verifySignature=distrusts,
+  )
+
+  expect(
+    switch outcome {
+    | ApplyDelta.Rejected(_) => true
+    | Applied(_) => false
+    },
+  )->toBe(true)
+  expect(writes.contents)->toBe(0)
+  expect(Array.length(stored.contents))->toBe(2)
+})
+
 testAsync("applies changed records and removes tombstoned ones", async () => {
   let (repo, stored, _) = makeRepo([rice, beans])
   let updatedRice = {...rice, kcal100g: 140., carbs100g: 35.}
@@ -58,6 +86,7 @@ testAsync("applies changed records and removes tombstoned ones", async () => {
   let outcome = await ApplyDelta.run(
     ~repository=repo,
     ~delta=delta(~checksum=expected, ~changed=[updatedRice, corn], ~removed=[beans.id]),
+    ~verifySignature=trusts,
   )
 
   switch outcome {
@@ -82,6 +111,7 @@ testAsync("writes nothing when the resulting digest does not match", async () =>
   let outcome = await ApplyDelta.run(
     ~repository=repo,
     ~delta=delta(~checksum="0000000000000000000000000000000000000000000000000000000000000000", ~changed=[corn], ~removed=[]),
+    ~verifySignature=trusts,
   )
 
   expect(
@@ -104,6 +134,7 @@ testAsync("a full snapshot replaces the whole dataset", async () => {
   let outcome = await ApplyDelta.run(
     ~repository=repo,
     ~delta=delta(~from=None, ~checksum=expected, ~changed=[corn], ~removed=[]),
+    ~verifySignature=trusts,
   )
 
   expect(
@@ -122,6 +153,7 @@ testAsync("an empty delta is applied as a no-op that still verifies", async () =
   let outcome = await ApplyDelta.run(
     ~repository=repo,
     ~delta=delta(~checksum=expected, ~changed=[], ~removed=[]),
+    ~verifySignature=trusts,
   )
 
   expect(
